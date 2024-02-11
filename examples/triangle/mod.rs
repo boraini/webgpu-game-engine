@@ -1,10 +1,10 @@
 use webgpu_game_engine::{
-    engine::winit::{run_winit, WinitSettings},
+    engine::{service::EnabledServices, winit::{run_winit, WinitSettings}},
     renderer::{
         light::Light,
         material::{Material, PhongMaterial},
     },
-    scene::{camera::Camera, mesh::Mesh, scene::Scene},
+    scene::{camera::Camera, mesh::Mesh, object3d::Object3D, scene::Scene}, util::{frame_delta::get_frame_delta, orbit_controls::{init_orbit_controls, orbit_controls}, simple_axes::simple_axes},
 };
 
 const TRIANGLE_VERTICES: [f32; 36] = [
@@ -29,36 +29,50 @@ pub fn main() {
         5.0,
     ));
     let object3d = Mesh::new_object_3d(None, vertex_array, index_array, material);
+    let axes3d = simple_axes();
+    let mut scene_root = Object3D::create_empty();
+    scene_root.children.push(object3d);
+    scene_root.children.push(axes3d);
     let camera = Camera::PerspectiveCamera {
         world_to_local: glm::ext::look_at(
-            glm::vec3(1.2, 0.5, 0.5),
+            glm::vec3(4.0, 0.5, 0.5),
             glm::vec3(0.0, 0.0, 0.0),
             glm::vec3(0.0, 1.0, 0.0),
         ),
         near: 0.5,
-        far: 2.5,
+        far: 10.0,
         aspect: 1.5,
     };
-    dbg!(&object3d);
     unsafe {
         let _ = SCENE.insert({
             let mut my_scene = Scene::new();
             my_scene.camera = camera;
             my_scene.lights.push(light);
-            my_scene.root = object3d;
+            my_scene.root = scene_root;
             my_scene
         });
     }
+
+    let mut enabled_services = EnabledServices::default();
+
+    init_orbit_controls(&mut enabled_services);
+
     run_winit(
         &WinitSettings {
             window_width: 800,
             window_height: 600,
         },
+        enabled_services,
         render_loop,
     )
 }
 
 fn render_loop(current_time: f64) -> &'static mut Scene {
     // I don't care.
-    return unsafe { SCENE.as_mut().unwrap() };
+    let scene = unsafe { SCENE.as_mut().unwrap() };
+
+    let delta = get_frame_delta(current_time);
+    orbit_controls(&mut scene.camera, delta);
+
+    scene
 }

@@ -19,12 +19,12 @@ impl Camera {
                 near,
                 far,
                 aspect,
-            } => glm::Mat4 {
-                c0: glm::Vec4::new(1.0, 0.0, 0.0, 0.0),
-                c1: glm::Vec4::new(0.0, 1.0 / aspect, 0.0, 0.0),
-                c2: glm::Vec4::new(0.0, 0.0, -(far + near) / (far - near), -1.0),
-                c3: glm::Vec4::new(0.0, 0.0, -2.0 * near * far / (far - near), 0.0),
-            }
+            } => glm::ext::perspective(
+                90.0f32.to_radians(),
+                aspect.to_owned(),
+                near.to_owned(),
+                far.to_owned(),
+            )
             .mul_m(world_to_local),
         }
     }

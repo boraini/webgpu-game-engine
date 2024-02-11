@@ -1,4 +1,5 @@
 use crate::{
+    engine::mouse_service::MouseService,
     renderer::{
         material::MaterialManager, render::render_to_texture_view, wgpu_handles::WgpuHandles,
     },
@@ -6,25 +7,30 @@ use crate::{
 };
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use winit::{
-    event::{Event, WindowEvent},
+    event::{Event, MouseButton, WindowEvent},
     event_loop::EventLoop,
     window::{Window, WindowId},
 };
+
+use super::service::EnabledServices;
 
 pub struct WinitSettings {
     pub window_width: u32,
     pub window_height: u32,
 }
 
-pub fn run_winit<'a, F>(settings: &WinitSettings, render_loop: F)
+pub fn run_winit<'a, F>(settings: &WinitSettings, enabled_services: EnabledServices, render_loop: F)
 where
     F: Fn(f64) -> &'a mut Scene,
 {
-    pollster::block_on(run_winit_async(settings, render_loop));
+    pollster::block_on(run_winit_async(settings, enabled_services, render_loop));
 }
 
-pub async fn run_winit_async<'a, F>(settings: &WinitSettings, render_loop: F)
-where
+pub async fn run_winit_async<'a, F>(
+    settings: &WinitSettings,
+    enabled_services: EnabledServices,
+    render_loop: F,
+) where
     F: Fn(f64) -> &'a mut Scene,
 {
     let event_loop = EventLoop::new().unwrap();
@@ -137,6 +143,12 @@ where
                                 &mut material_manager,
                             );
                             frame.present();
+
+                            viewport.desc.window.request_redraw();
+
+                            if (enabled_services.mouse_service) {
+                                MouseService::get_mut().clear_deltas();
+                            }
                         }
                     }
                     WindowEvent::CloseRequested => {
@@ -144,6 +156,35 @@ where
                         if viewports.is_empty() {
                             target.exit();
                         }
+                    }
+                    WindowEvent::MouseInput {
+                        device_id,
+                        state,
+                        button,
+                    } => {
+                        if !enabled_services.mouse_service {
+                            return;
+                        }
+                        match button {
+                            MouseButton::Left => match state {
+                                winit::event::ElementState::Pressed => {
+                                    MouseService::handle_mouse_down()
+                                }
+                                winit::event::ElementState::Released => {
+                                    MouseService::handle_mouse_up()
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                    WindowEvent::CursorMoved {
+                        device_id,
+                        position,
+                    } => {
+                        if !enabled_services.mouse_service {
+                            return;
+                        }
+                        MouseService::handle_mouse_move(position.x, position.y);
                     }
                     _ => {}
                 }
