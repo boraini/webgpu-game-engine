@@ -41,3 +41,24 @@ impl Mesh {
         }
     }
 }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct VertexBufferObject {
+    pub position : glm::Vec4,
+    pub normal : glm::Vec4,
+    pub uv : glm::Vec4,
+}
+
+impl VertexBufferObject {
+    pub fn new_from_slices(position: &[f32; 3], normal: &[f32; 3], uv: &[f32; 2]) -> Self {
+        VertexBufferObject {
+            position: glm::vec4(position[0], position[1], position[2], 1.0),
+            normal: glm::vec4(normal[0], normal[1], normal[2], 0.0),
+            uv: glm::vec4(uv[0], uv[1], 0.0, 0.0),
+        }
+    }
+}
+
+unsafe impl bytemuck::Zeroable for VertexBufferObject {}
+unsafe impl bytemuck::Pod for VertexBufferObject {}

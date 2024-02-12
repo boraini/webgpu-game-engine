@@ -1,4 +1,6 @@
 pub mod triangle;
+pub mod dice;
+
 struct ExampleDesc {
     name: &'static str,
     function: fn(),
@@ -11,6 +13,13 @@ struct ExampleDesc {
 const EXAMPLES: &[ExampleDesc] = &[ExampleDesc {
     name: "triangle",
     function: crate::triangle::main,
+    webgl: false, // No compute
+    webgpu: true,
+},
+
+ExampleDesc {
+    name: "dice",
+    function: crate::dice::main,
     webgl: false, // No compute
     webgpu: true,
 }];

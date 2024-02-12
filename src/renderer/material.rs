@@ -1,4 +1,4 @@
-use std::{num::NonZeroU64, sync::Arc};
+use std::{collections::HashMap, num::NonZeroU64};
 
 use glm::Vector3;
 use strum_macros::EnumIter;
@@ -23,6 +23,7 @@ pub struct MaterialManager {
     pub point_light_bind_group_layout: Option<BindGroupLayout>,
     pub view_info_buffer: Option<Buffer>,
     pub view_info_bind_group: Option<BindGroup>,
+    pub textures: HashMap<String, Texture>,
 }
 
 #[derive(Debug)]
@@ -70,20 +71,20 @@ unsafe impl bytemuck::Pod for PhongMaterialData {}
 
 #[derive(Debug)]
 pub struct PhongMaterialWithTexture {
-    ka: glm::Vector3<f32>,
-    kd: glm::Vector3<f32>,
-    map_kd: Arc<Texture>,
-    ks: glm::Vector3<f32>,
-    shininess: f32,
+    pub data: PhongMaterialData,
+    map_kd: String,
+    texture_loaded: bool,
+    pub buffer: Option<Buffer>,
+    pub bind_group: Option<BindGroup>,
 }
 
 impl PartialEq for PhongMaterialWithTexture {
     fn eq(&self, other: &Self) -> bool {
-        // TODO: compare textures
-        self.ka == other.ka
-            && self.kd == other.kd
-            && self.ks == other.ks
-            && self.shininess == other.shininess
+        self.map_kd == other.map_kd
+            && self.data.ka == other.data.ka
+            && self.data.kd == other.data.kd
+            && self.data.ks == other.data.ks
+            && self.data.shininess == other.data.shininess
     }
 }
 
@@ -109,6 +110,29 @@ impl PhongMaterial {
             bind_group: None,
         }
     }
+
+    pub fn new_with_texture(
+        ka: Vector3<f32>,
+        kd: Vector3<f32>,
+        ks: Vector3<f32>,
+        shininess: f32,
+        map_kd: &String,
+    ) -> PhongMaterialWithTexture {
+        PhongMaterialWithTexture {
+            data: PhongMaterialData {
+                ka,
+                kd,
+                ks,
+                shininess,
+                _padding1: 0,
+                _padding2: 0,
+            },
+            map_kd: map_kd.to_owned(),
+            texture_loaded: false,
+            buffer: None,
+            bind_group: None,
+        }
+    }
 }
 
 impl MaterialManager {
@@ -121,6 +145,7 @@ impl MaterialManager {
             point_light_bind_group_layout: None,
             view_info_buffer: None,
             view_info_bind_group: None,
+            textures: HashMap::new(),
         }
     }
 
